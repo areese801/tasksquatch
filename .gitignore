@@ -1,0 +1,72 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# Test / coverage
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+
+# IDE
+.idea/
+.vscode/
+.zed/
+.fleet/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# tasksquatch
+tasksquatch.db
+tasksquatch.db-wal
+tasksquatch.db-shm
+*.db
+*.db-journal
+
+# trusty-cage
+.trusty-cage-patches/
+.cage-patches/
+
+# local config
+.env
+.env.local
+
+# Claude Code per-machine config (project-level CLAUDE.md and shared settings, if any, are tracked)
+.claude/settings.local.json

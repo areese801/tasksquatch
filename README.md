@@ -116,6 +116,42 @@ Pre-commit hooks cover ruff lint, ruff format, mypy, and the usual
 trailing-whitespace / EOF / YAML / TOML checks. Run `pre-commit install`
 once.
 
+## Testing
+
+### Unit + contract tests
+
+```bash
+make test    # pytest -q — the in-process suite
+```
+
+### External smoke (recommended pre-release)
+
+The `scripts/smoke-*.sh` suite drives the installed `tsq`, `tasksquatch
+web`, and `tasksquatch-mcp` surfaces against scratch databases. Run
+them all in sequence:
+
+```bash
+make smoke
+```
+
+Or pick one:
+
+```bash
+make smoke-cli   # CLI end-to-end against a scratch DB
+make smoke-web   # REST + Web UI against a scratch server (port 18080)
+make smoke-mcp   # MCP JSON-RPC over stdio
+```
+
+Each script exits non-zero on the first failed assertion and prints a
+colour-coded PASS/FAIL tally at the end.
+
+### Manual verification
+
+`test-plans/README.md` indexes the human-driven checklists for the
+surfaces automation can't reasonably cover: the TUI screens, real
+desktop notifications, a wheel install on a clean machine, and the
+Claude Code MCP integration.
+
 ## License
 
 [MIT](LICENSE).

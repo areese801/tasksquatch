@@ -106,6 +106,25 @@ Then exercise each surface by eye:
 
 If any of these regress, **abort the release** and investigate.
 
+### 3a. External smoke + manual plans
+
+Before publishing, run the external shell-driven smoke suite and walk
+the human-driven plans for the surfaces automation cannot cover:
+
+```bash
+make smoke   # runs scripts/smoke-cli.sh, smoke-web.sh, smoke-mcp.sh
+```
+
+Then complete:
+
+- [`test-plans/manual-tui-plan.md`](../test-plans/manual-tui-plan.md)
+  — every Textual screen, keypress, and form.
+- [`test-plans/manual-notify-plan.md`](../test-plans/manual-notify-plan.md)
+  — a real desktop banner fires and dedups.
+
+If any smoke script or plan regresses, **abort the release** and
+investigate.
+
 ## 4. Publish
 
 9. Authenticate. Either export the token or use a `.pypirc` per the uv

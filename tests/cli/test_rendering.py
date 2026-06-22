@@ -109,6 +109,6 @@ def test_render_task_returns_expected_keys(session: Session) -> None:
     assert rendered["project"] == "Work"
     assert rendered["due"] == "2026-07-01 09:30"
     assert rendered["labels"] == "home,urgent"
-    assert rendered["completed"] == "open"
+    assert rendered["completed"] is False
     assert rendered["priority"] == task.priority.value
     assert isinstance(rendered["number"], int)

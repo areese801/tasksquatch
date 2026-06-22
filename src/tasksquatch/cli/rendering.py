@@ -87,9 +87,8 @@ def render_task(task: Task) -> dict[str, Any]:
         live session so relationships can load.
     :returns: A dict with the keys ``number``, ``title``, ``project``,
         ``priority``, ``due``, ``labels``, and ``completed``. The
-        ``completed`` value is the literal ``"done"`` or ``"open"``
-        rather than a boolean so table rendering and JSON output stay
-        readable across surfaces.
+        ``completed`` value is the underlying boolean for clarity in
+        both table rendering and JSON output.
     """
     project_name = _safe_relationship(
         lambda: task.project.name if task.project else "-"
@@ -104,7 +103,7 @@ def render_task(task: Task) -> dict[str, Any]:
         "priority": task.priority.value,
         "due": _fmt_due(task.due_date, task.due_time),
         "labels": labels,
-        "completed": "done" if task.completed else "open",
+        "completed": task.completed,
     }
 
 

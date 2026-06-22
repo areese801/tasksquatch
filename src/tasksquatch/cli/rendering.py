@@ -20,7 +20,7 @@ from rich.table import Table
 from sqlalchemy.exc import MissingGreenlet
 from sqlalchemy.orm.exc import DetachedInstanceError
 
-from tasksquatch.core.models import Task
+from tasksquatch.core.models import Comment, Task
 
 
 def default_console() -> Console:
@@ -105,6 +105,63 @@ def render_task(task: Task) -> dict[str, Any]:
     }
 
 
+def render_task_detail(
+    task: Task,
+    *,
+    subtasks: Sequence[Task] = (),
+    comments: Sequence[Comment] = (),
+) -> dict[str, Any]:
+    """
+    Build a rich detail dict for a single task, suitable for ``show``.
+
+    Extends :func:`render_task` with description, recurrence, anchor,
+    parent reference, subtask summaries, and comment timestamps. The
+    relationship fields fall back to ``"-"`` when the related row cannot
+    be loaded, matching :func:`render_task`'s defensive style.
+
+    :param task: The task to render.
+    :param subtasks: The subtasks to embed, in display order. Each is
+        flattened to a ``{number, title, completed}`` summary.
+    :param comments: The comments to embed, in chronological order.
+        Each is flattened to ``{id, created_at, body}``.
+    :returns: A dict with the keys of :func:`render_task` plus
+        ``description``, ``recurrence``, ``recurrence_anchor``,
+        ``parent``, ``subtasks``, ``comments``, ``created_at``,
+        ``completed_at``.
+    """
+    base = render_task(task)
+    base.update(
+        {
+            "id": task.id,
+            "description": task.description or "-",
+            "recurrence": task.recurrence or "-",
+            "recurrence_anchor": task.recurrence_anchor.value,
+            "parent": _safe_parent_number(task),
+            "subtasks": [
+                {
+                    "number": sub.number,
+                    "title": sub.title,
+                    "completed": sub.completed,
+                }
+                for sub in subtasks
+            ],
+            "comments": [
+                {
+                    "id": comment.id,
+                    "created_at": comment.created_at.isoformat(),
+                    "body": comment.body,
+                }
+                for comment in comments
+            ],
+            "created_at": task.created_at.isoformat(),
+            "completed_at": (
+                task.completed_at.isoformat() if task.completed_at else None
+            ),
+        }
+    )
+    return base
+
+
 def _safe_relationship(getter: Any) -> str:
     """
     Run ``getter`` and return ``"-"`` if a relationship cannot load.
@@ -117,6 +174,23 @@ def _safe_relationship(getter: Any) -> str:
         return str(getter())
     except (DetachedInstanceError, MissingGreenlet):
         return "-"
+
+
+def _safe_parent_number(task: Task) -> int | None:
+    """
+    Return the parent task's user-facing ``number``, or ``None``.
+
+    Mirrors :func:`_safe_relationship`'s defensiveness against detached
+    instances and missing greenlets — both return ``None`` here so
+    JSON output keeps a stable shape.
+    """
+    try:
+        parent = task.parent
+    except (DetachedInstanceError, MissingGreenlet):
+        return None
+    if parent is None:
+        return None
+    return parent.number
 
 
 def _fmt_due(due_date: date | None, due_time: time | None) -> str:

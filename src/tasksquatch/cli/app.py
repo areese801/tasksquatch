@@ -16,6 +16,7 @@ import typer
 
 from tasksquatch.cli._context import CliContext
 from tasksquatch.cli.commands import notify as notify_cmd
+from tasksquatch.cli.commands import tasks as tasks_cmd
 from tasksquatch.cli.commands import version as version_cmd
 from tasksquatch.cli.rendering import default_console
 
@@ -63,3 +64,12 @@ def _root(
 
 app.command(name="version")(version_cmd.version)
 app.command(name="notify")(notify_cmd.notify)
+app.command(name="add")(tasks_cmd.add)
+app.command(name="list")(tasks_cmd.list_tasks)
+app.command(name="show")(tasks_cmd.show)
+app.command(name="done")(tasks_cmd.done)
+app.command(name="undo")(tasks_cmd.undo)
+app.command(name="edit")(tasks_cmd.edit)
+app.command(name="rm")(tasks_cmd.rm)
+app.command(name="move")(tasks_cmd.move)
+app.command(name="comment")(tasks_cmd.comment)

@@ -21,11 +21,13 @@ the unversioned ``/healthz`` liveness probe sits at the root.
 
 from __future__ import annotations
 
+import pathlib
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 
 from tasksquatch import __version__
 from tasksquatch.core import (
@@ -42,6 +44,9 @@ from tasksquatch.rest.routers import comments as comments_router
 from tasksquatch.rest.routers import labels as labels_router
 from tasksquatch.rest.routers import projects as projects_router
 from tasksquatch.rest.routers import tasks as tasks_router
+from tasksquatch.web import router as web_router
+
+_STATIC_DIR = pathlib.Path(__file__).resolve().parent.parent / "web" / "static"
 
 
 @asynccontextmanager
@@ -102,6 +107,13 @@ def create_app(db_path: Path | None = None) -> FastAPI:
     app.include_router(labels_router.router, prefix="/api/v1")
     app.include_router(comments_router.router, prefix="/api/v1")
     app.include_router(activity_router.router, prefix="/api/v1")
+
+    app.include_router(web_router.router)
+    app.mount(
+        "/static",
+        StaticFiles(directory=str(_STATIC_DIR)),
+        name="static",
+    )
 
     @app.get("/healthz", tags=["meta"])
     def healthz() -> dict[str, str]:

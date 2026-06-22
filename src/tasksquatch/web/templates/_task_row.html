@@ -1,0 +1,37 @@
+<article class="task-row{% if task.completed %} completed{% endif %}" data-task-id="{{ task.id }}">
+    <button
+        type="button"
+        class="toggle-btn"
+        aria-label="Toggle completion"
+        hx-post="/ui/tasks/{{ task.id }}/toggle"
+        hx-target="closest .task-row"
+        hx-swap="outerHTML"
+    >{% if task.completed %}&#10003;{% else %}&nbsp;{% endif %}</button>
+    <div style="flex: 1;">
+        <button
+            type="button"
+            class="task-title"
+            hx-get="/ui/tasks/{{ task.id }}"
+            hx-target="#task-detail"
+            hx-swap="innerHTML"
+        >{{ task.title }}</button>
+        <div class="task-meta">
+            <span class="priority-badge {{ task.priority.value.lower() }}">{{ task.priority.value }}</span>
+            {% if task.due_date %}
+                <span>due {{ task.due_date.isoformat() }}{% if task.due_time %} {{ task.due_time.strftime('%H:%M') }}{% endif %}</span>
+            {% endif %}
+            {% for label in task.labels %}
+                <span class="label-chip">{{ label.name }}</span>
+            {% endfor %}
+        </div>
+    </div>
+    <button
+        type="button"
+        class="btn btn-danger"
+        aria-label="Delete task"
+        hx-post="/ui/tasks/{{ task.id }}/delete"
+        hx-target="closest .task-row"
+        hx-swap="outerHTML"
+        hx-confirm="Delete this task?"
+    >&times;</button>
+</article>

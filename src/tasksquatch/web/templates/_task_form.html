@@ -1,0 +1,109 @@
+{#
+    Create/edit form. When `task` is None this acts as a create form
+    that POSTs to /ui/tasks; when `task` is provided it PUTs to
+    /ui/tasks/{id}.
+#}
+<form
+    class="task-form"
+    {% if task %}
+        hx-put="/ui/tasks/{{ task.id }}"
+        hx-target="#task-detail"
+        hx-swap="innerHTML"
+    {% else %}
+        hx-post="/ui/tasks"
+        hx-target="#task-list"
+        hx-swap="innerHTML"
+    {% endif %}
+>
+    <label>
+        Title
+        <input
+            type="text"
+            name="title"
+            required
+            value="{{ task.title if task else '' }}"
+        />
+    </label>
+    <div class="form-row">
+        <label>
+            Project
+            <select name="project_id">
+                {% for project in projects %}
+                    <option
+                        value="{{ project.id }}"
+                        {% if task and task.project_id == project.id %}selected
+                        {% elif not task and current_project and current_project.id == project.id %}selected
+                        {% endif %}
+                    >{{ project.name }}</option>
+                {% endfor %}
+            </select>
+        </label>
+        <label>
+            Priority
+            <select name="priority">
+                {% for value in ["P1", "P2", "P3", "P4"] %}
+                    <option
+                        value="{{ value }}"
+                        {% if task and task.priority.value == value %}selected
+                        {% elif not task and value == "P4" %}selected
+                        {% endif %}
+                    >{{ value }}</option>
+                {% endfor %}
+            </select>
+        </label>
+    </div>
+    <div class="form-row">
+        <label>
+            Due date
+            <input
+                type="date"
+                name="due_date"
+                value="{{ task.due_date.isoformat() if task and task.due_date else '' }}"
+            />
+        </label>
+        <label>
+            Due time
+            <input
+                type="time"
+                name="due_time"
+                value="{{ task.due_time.strftime('%H:%M') if task and task.due_time else '' }}"
+            />
+        </label>
+    </div>
+    <label>
+        Labels (comma-separated ids)
+        <input
+            type="text"
+            name="labels"
+            value="{{ (task.labels | map(attribute='id') | join(',')) if task else '' }}"
+        />
+    </label>
+    <div class="form-row">
+        <label>
+            Recurrence (RRULE)
+            <input
+                type="text"
+                name="recurrence"
+                value="{{ task.recurrence if task and task.recurrence else '' }}"
+            />
+        </label>
+        <label>
+            Recurrence anchor
+            <select name="recurrence_anchor">
+                {% for value in ["fixed", "relative"] %}
+                    <option
+                        value="{{ value }}"
+                        {% if task and task.recurrence_anchor.value == value %}selected
+                        {% elif not task and value == "fixed" %}selected
+                        {% endif %}
+                    >{{ value }}</option>
+                {% endfor %}
+            </select>
+        </label>
+    </div>
+    <div>
+        <button type="submit" class="btn btn-primary">
+            {% if task %}Save{% else %}Add task{% endif %}
+        </button>
+    </div>
+</form>

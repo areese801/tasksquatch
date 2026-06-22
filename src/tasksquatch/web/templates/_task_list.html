@@ -1,0 +1,11 @@
+{% include "_task_form.html" %}
+
+{% if tasks %}
+    <div class="task-rows">
+        {% for task in tasks %}
+            {% include "_task_row.html" %}
+        {% endfor %}
+    </div>
+{% else %}
+    <p class="empty-state">No tasks in this project yet.</p>
+{% endif %}

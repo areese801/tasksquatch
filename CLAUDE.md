@@ -89,7 +89,13 @@ Common loops are wrapped in `Makefile` targets:
 | `make format`    | `ruff format .`                                      |
 | `make typecheck` | `mypy src` (strict)                                  |
 | `make run`       | `tasksquatch --help`                                 |
+| `make migrate`   | `alembic upgrade head` against `$TASKSQUATCH_DB`     |
+| `make migrate-revision MSG="..."` | `alembic revision --autogenerate -m "$(MSG)"` |
 | `make clean`     | Remove build artifacts and tool caches               |
+
+Alembic resolves the SQLite path from `TASKSQUATCH_DB` (falling back
+to `paths.get_default_db_path()`); the `sqlalchemy.url` in
+`alembic.ini` is a placeholder that env.py overrides at runtime.
 
 Pre-commit hooks (run `pre-commit install` once, then automatic) cover
 ruff lint, ruff format, mypy, trailing whitespace, EOF newline, and
@@ -347,3 +353,7 @@ again before you commit.
   `asyncio.CancelledError` etc. be British where the API is.
 - **No backwards-compat shims for code that never shipped.** This is a
   pre-1.0 codebase; delete dead code instead of working around it.
+- **Never edit a merged migration in place — write a new revision.**
+  Alembic migrations are the historical record of the schema; rewriting
+  one breaks every environment that already ran it. If you find a bug
+  in an old revision, add a follow-up revision that corrects it.

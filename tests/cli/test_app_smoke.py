@@ -15,11 +15,11 @@ def test_version_command_prints_package_version() -> None:
     assert result.output.strip() == __version__
 
 
-def test_notify_command_is_stub_and_exits_nonzero() -> None:
+def test_notify_command_runs_on_empty_db(tmp_path: Path) -> None:
     runner = CliRunner()
-    result = runner.invoke(app, ["notify"])
-    assert result.exit_code == 1
-    assert "not yet implemented" in result.stderr
+    result = runner.invoke(app, ["--db", str(tmp_path / "smoke.db"), "notify"])
+    assert result.exit_code == 0
+    assert "fired 0 notification(s)." in result.output
 
 
 def test_db_global_flag_is_accepted_before_subcommand(tmp_path: Path) -> None:

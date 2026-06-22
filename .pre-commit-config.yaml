@@ -3,7 +3,9 @@ repos:
     rev: v5.0.0
     hooks:
       - id: trailing-whitespace
+        exclude: ^tests/tui/__snapshots__/
       - id: end-of-file-fixer
+        exclude: ^tests/tui/__snapshots__/
       - id: check-yaml
       - id: check-toml
 
@@ -30,3 +32,4 @@ repos:
           - uvicorn>=0.29
           - textual>=0.60
           - rapidfuzz>=3.6
+          - desktop-notifier>=5.0

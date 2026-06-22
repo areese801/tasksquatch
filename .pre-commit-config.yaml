@@ -33,3 +33,4 @@ repos:
           - textual>=0.60
           - rapidfuzz>=3.6
           - desktop-notifier>=5.0
+          - mcp>=1.0

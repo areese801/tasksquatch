@@ -28,3 +28,5 @@ repos:
           - fastapi>=0.110
           - pydantic>=2.6
           - uvicorn>=0.29
+          - textual>=0.60
+          - rapidfuzz>=3.6

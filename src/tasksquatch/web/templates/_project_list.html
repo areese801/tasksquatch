@@ -1,0 +1,13 @@
+<ul class="project-list">
+    {% for project in projects %}
+        <li>
+            <button
+                type="button"
+                class="project-button{% if current_project and project.id == current_project.id %} active{% endif %}"
+                hx-get="/ui/projects/{{ project.id }}"
+                hx-target="#task-list"
+                hx-swap="innerHTML"
+            >{{ project.name }}</button>
+        </li>
+    {% endfor %}
+</ul>

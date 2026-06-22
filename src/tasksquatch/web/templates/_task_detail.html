@@ -1,0 +1,81 @@
+<article class="task-detail" data-task-id="{{ task.id }}">
+    <div class="detail-section">
+        <h3>Task #{{ task.number }}</h3>
+        <h2 style="margin: 0;">{{ task.title }}</h2>
+    </div>
+
+    {% if task.description %}
+        <div class="detail-section">
+            <h3>Description</h3>
+            <div class="detail-description">{{ task.description | markdown | safe }}</div>
+        </div>
+    {% endif %}
+
+    <div class="detail-section">
+        <h3>Meta</h3>
+        <ul style="list-style: none; margin: 0; padding: 0;">
+            <li>Project: {{ project.name }}</li>
+            <li>
+                Priority:
+                <span class="priority-badge {{ task.priority.value.lower() }}">{{ task.priority.value }}</span>
+            </li>
+            {% if task.due_date %}
+                <li>Due: {{ task.due_date.isoformat() }}{% if task.due_time %} {{ task.due_time.strftime('%H:%M') }}{% endif %}</li>
+            {% endif %}
+            {% if task.recurrence %}
+                <li>Recurrence: <code>{{ task.recurrence }}</code> ({{ task.recurrence_anchor.value }})</li>
+            {% endif %}
+            <li>
+                Labels:
+                {% for label in task.labels %}
+                    <span class="label-chip">{{ label.name }}</span>
+                {% else %}
+                    <span class="empty-state" style="padding: 0;">none</span>
+                {% endfor %}
+            </li>
+        </ul>
+    </div>
+
+    {% if subtasks %}
+        <div class="detail-section">
+            <h3>Subtasks</h3>
+            <ul>
+                {% for subtask in subtasks %}
+                    <li>{{ subtask.title }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    {% endif %}
+
+    {% if comments %}
+        <div class="detail-section">
+            <h3>Comments</h3>
+            <ul style="list-style: none; padding: 0;">
+                {% for comment in comments %}
+                    <li style="margin-bottom: 0.5rem;">
+                        <div class="task-meta">{{ comment.created_at.isoformat() }}</div>
+                        <div>{{ comment.body | markdown | safe }}</div>
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+    {% endif %}
+
+    <div class="detail-section">
+        <button
+            type="button"
+            class="btn"
+            hx-get="/ui/tasks/{{ task.id }}/edit"
+            hx-target="#task-detail"
+            hx-swap="innerHTML"
+        >Edit</button>
+        <button
+            type="button"
+            class="btn btn-danger"
+            hx-post="/ui/tasks/{{ task.id }}/delete"
+            hx-target="#task-detail"
+            hx-swap="innerHTML"
+            hx-confirm="Delete this task?"
+        >Delete</button>
+    </div>
+</article>

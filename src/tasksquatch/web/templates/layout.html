@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>{% block title %}tasksquatch{% endblock %}</title>
+        <link rel="stylesheet" href="/static/style.css" />
+        <script defer src="/static/htmx.min.js"></script>
+    </head>
+    <body>
+        <a href="#main" class="skip-link">Skip to main</a>
+        <div class="tsq-app">
+            <header class="tsq-header">
+                <h1>tasksquatch</h1>
+            </header>
+            <nav id="sidebar" aria-label="Projects">
+                {% block sidebar %}{% endblock %}
+            </nav>
+            <main id="main" tabindex="-1">
+                <section id="task-list">
+                    {% block task_list %}{% endblock %}
+                </section>
+            </main>
+            <aside id="task-detail" aria-label="Task detail">
+                {% block task_detail %}
+                    <p class="empty-state">Select a task to see details.</p>
+                {% endblock %}
+            </aside>
+        </div>
+    </body>
+</html>

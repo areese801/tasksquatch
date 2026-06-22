@@ -1,0 +1,11 @@
+{% extends "layout.html" %}
+
+{% block title %}tasksquatch — {{ current_project.name }}{% endblock %}
+
+{% block sidebar %}
+    {% include "_project_list.html" %}
+{% endblock %}
+
+{% block task_list %}
+    {% include "_task_list.html" %}
+{% endblock %}

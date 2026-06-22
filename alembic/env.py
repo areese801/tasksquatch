@@ -19,9 +19,9 @@ import os
 from logging.config import fileConfig
 from pathlib import Path
 
+from alembic import context
 from sqlalchemy import engine_from_config, pool
 
-from alembic import context
 from tasksquatch.core import models  # noqa: F401  (register mappers)
 from tasksquatch.core.db import Base, TaskNumberSeq  # noqa: F401  (register mapper)
 from tasksquatch.core.paths import get_default_db_path

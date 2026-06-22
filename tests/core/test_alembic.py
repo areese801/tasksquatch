@@ -16,12 +16,12 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+from alembic import command
 from alembic.autogenerate import compare_metadata
 from alembic.config import Config
 from alembic.migration import MigrationContext
 from sqlalchemy import inspect
 
-from alembic import command
 from tasksquatch.core.db import Base, create_engine_for_path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -125,6 +125,5 @@ def test_downgrade_base_removes_all_domain_tables(
     remaining = set(inspector.get_table_names())
     engine.dispose()
 
-    assert remaining.isdisjoint(EXPECTED_TABLES), (
-        f"Tables left after downgrade: {remaining & EXPECTED_TABLES!r}"
-    )
+    leftover = remaining & EXPECTED_TABLES
+    assert not leftover, f"Tables left after downgrade: {leftover!r}"

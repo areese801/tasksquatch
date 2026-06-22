@@ -62,6 +62,7 @@ class ActivityEventType(StrEnum):
     COMMENT_DELETED = "comment_deleted"
     MOVED = "moved"
     PRIORITY_CHANGED = "priority_changed"
+    TASK_DELETED = "task_deleted"
     PROJECT_CREATED = "project_created"
     PROJECT_RENAMED = "project_renamed"
     PROJECT_DELETED = "project_deleted"

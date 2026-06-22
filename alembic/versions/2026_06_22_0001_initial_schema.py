@@ -29,7 +29,6 @@ from datetime import UTC, datetime
 
 import sqlalchemy as sa
 import uuid_utils
-
 from alembic import op
 
 revision: str = "0001"

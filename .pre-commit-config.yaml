@@ -23,3 +23,5 @@ repos:
         additional_dependencies:
           - typer>=0.12
           - types-python-dateutil
+          - sqlalchemy>=2.0
+          - uuid-utils>=0.9

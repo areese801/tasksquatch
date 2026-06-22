@@ -3,14 +3,9 @@ Task listing screen for a single project.
 
 Composes a :class:`FilterInput` over a :class:`DataTable` that shows
 the project's top-level tasks. Keystrokes drive complete / uncomplete
-/ delete / comment actions; the ``/`` key focuses the filter input,
-which fuzzy-filters the displayed rows by title, project name, and
-attached label names.
-
-Detail and edit screens are intentionally out of scope here — they
-land in TSQ-26. The ``enter`` and ``e`` keys notify a "coming soon"
-message so the placeholder is discoverable without doing anything
-destructive.
+/ delete / comment / create / search / open-detail / edit actions;
+the ``/`` key focuses the filter input, which fuzzy-filters the
+displayed rows by title, project name, and attached label names.
 """
 
 from __future__ import annotations
@@ -30,6 +25,9 @@ from tasksquatch.core.services import comments as comments_service
 from tasksquatch.core.services import queries as queries_service
 from tasksquatch.core.services import tasks as tasks_service
 from tasksquatch.tui.screens._prompts import ConfirmScreen, TextPromptScreen
+from tasksquatch.tui.screens.search import SearchScreen
+from tasksquatch.tui.screens.task_detail import TaskDetailScreen
+from tasksquatch.tui.screens.task_edit import TaskEditScreen
 from tasksquatch.tui.widgets.fuzzy_filter import (
     FilterChanged,
     FilterInput,
@@ -76,11 +74,13 @@ class TaskListScreen(Screen[None]):
         Binding("k", "cursor_up", "Up", show=False),
         Binding("up", "cursor_up", "Up", show=False),
         Binding("enter", "open_task", "Open"),
+        Binding("n", "new_task", "New"),
         Binding("d", "complete_task", "Done"),
         Binding("u", "uncomplete_task", "Undo"),
         Binding("e", "edit_task", "Edit"),
         Binding("x", "delete_task", "Delete"),
         Binding("c", "comment_task", "Comment"),
+        Binding("s", "search", "Search"),
         Binding("slash", "focus_filter", "Filter"),
         Binding("escape", "escape", "Back", show=False),
         Binding("q", "pop_screen", "Back"),
@@ -251,15 +251,65 @@ class TaskListScreen(Screen[None]):
 
     def action_open_task(self) -> None:
         """
-        Placeholder for the detail screen (lands in TSQ-26).
+        Push :class:`TaskDetailScreen` for the highlighted row.
         """
-        self.notify("detail screen lands in TSQ-26")
+        task_id = self._selected_task()
+        if task_id is None:
+            return
+
+        def _on_dismiss(_result: None) -> None:
+            """
+            Refresh after the detail screen returns control.
+            """
+            self.refresh_tasks()
+
+        self.app.push_screen(TaskDetailScreen(task_id=task_id), _on_dismiss)
 
     def action_edit_task(self) -> None:
         """
-        Placeholder for the edit screen (lands in TSQ-26).
+        Push :class:`TaskEditScreen` for the highlighted row.
         """
-        self.notify("edit screen lands in TSQ-26")
+        task_id = self._selected_task()
+        if task_id is None:
+            return
+
+        def _on_dismiss(_result: str | None) -> None:
+            """
+            Refresh on edit completion so the list reflects new values.
+            """
+            self.refresh_tasks()
+
+        self.app.push_screen(TaskEditScreen(task_id=task_id), _on_dismiss)
+
+    def action_new_task(self) -> None:
+        """
+        Push :class:`TaskEditScreen` in create mode for this project.
+        """
+
+        def _on_dismiss(_result: str | None) -> None:
+            """
+            Refresh on create completion so the new task appears.
+            """
+            self.refresh_tasks()
+
+        self.app.push_screen(
+            TaskEditScreen(project_id=self._project_id),
+            _on_dismiss,
+        )
+
+    def action_search(self) -> None:
+        """
+        Push the global :class:`SearchScreen` and refresh on return.
+        """
+
+        def _on_dismiss(_result: None) -> None:
+            """
+            Refresh after the search screen returns control so any
+            mutations performed via the detail drill-down are visible.
+            """
+            self.refresh_tasks()
+
+        self.app.push_screen(SearchScreen(), _on_dismiss)
 
     def action_complete_task(self) -> None:
         """

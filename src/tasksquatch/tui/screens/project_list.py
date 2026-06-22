@@ -54,6 +54,7 @@ class ProjectListScreen(Screen[None]):
         Binding("n", "new_project", "New"),
         Binding("r", "rename_project", "Rename"),
         Binding("d", "delete_project", "Delete"),
+        Binding("s", "search", "Search"),
         Binding("q", "quit", "Quit"),
     ]
 
@@ -234,6 +235,21 @@ class ProjectListScreen(Screen[None]):
             ConfirmScreen(prompt=f"Delete project {current_name!r}?"),
             _on_confirm,
         )
+
+    def action_search(self) -> None:
+        """
+        Push the global :class:`SearchScreen`.
+        """
+        from tasksquatch.tui.screens.search import SearchScreen
+
+        def _on_dismiss(_result: None) -> None:
+            """
+            Refresh on return so any mutations performed via the search
+            drill-down are reflected in the project task counts.
+            """
+            self.refresh_projects()
+
+        self.app.push_screen(SearchScreen(), _on_dismiss)
 
     def action_quit(self) -> None:
         """

@@ -6,6 +6,13 @@
 # the friendlier error paths (e.g. ProjectNotEmptyError) surface a
 # helpful message rather than a traceback.
 
+# The tsq CLI uses `done` and `undo` as task-lifecycle subcommand
+# names; shellcheck mistakes the literal `done` argument for a shell
+# loop terminator and emits spurious SC1010 warnings. The names are
+# part of the user-facing UX, so disable that single check
+# script-wide rather than rewriting every invocation.
+# shellcheck disable=SC1010
+
 set -euo pipefail
 
 _HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"

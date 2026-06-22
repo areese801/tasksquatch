@@ -8,6 +8,9 @@
 
 set -euo pipefail
 
+# Color codes intended for sourcing scripts; YELLOW is reserved for
+# future warn-level helpers (e.g. _warn).
+# shellcheck disable=SC2034
 if [[ -t 1 ]]; then
     RED=$'\033[31m'
     GREEN=$'\033[32m'

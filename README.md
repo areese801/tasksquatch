@@ -2,38 +2,118 @@
 
 > An offline-first, local-only todo tracker. The tracker that hunts down your tasks.
 
-`tasksquatch` is a single-user, offline, open-source todo application
-inspired by Todoist — with **no SaaS dependency** and **no always-on
-server.** A single Python package exposes five surfaces over one shared
-`core` library backed by SQLite (WAL): a Typer CLI, a Textual TUI, a
-lightweight server-rendered Web UI, a local FastAPI REST API, and an
-MCP server so Claude Code (and other MCP clients) can manage your
-tasks. No network calls are required for any core operation.
+[![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Status: alpha](https://img.shields.io/badge/status-alpha-orange.svg)](#)
 
-**Status:** alpha, under construction. The skeleton is in place; the
-implementation lands epic by epic. The canonical design is in
-[`docs/spec.md`](docs/spec.md).
+`tasksquatch` is a single-user, offline todo tracker inspired by Todoist —
+with **no SaaS dependency** and **no always-on server.** Five surfaces (CLI,
+TUI, Web UI, REST API, MCP) share one `core` library backed by SQLite in
+WAL mode, so every surface opens its own short-lived session against the
+same database file and nothing requires a daemon to be running.
 
-## Quickstart
-
-When published, the recommended install is via [`pipx`](https://pipx.pypa.io/):
+## Install
 
 ```bash
-pipx install tasksquatch
+pipx install tasksquatch  # (when published)
 ```
 
 For development:
 
 ```bash
-make install   # editable install with dev extras
-make test      # run the test suite
+git clone https://github.com/areese801/tasksquatch
+cd tasksquatch && make install
 ```
 
-Run `make help` to see all available targets.
+## Quickstart
 
-## Links
+### CLI
+
+```bash
+tasksquatch add "Buy milk" -d today
+tasksquatch list
+tasksquatch done 1
+```
+
+### TUI
+
+```bash
+tasksquatch tui
+```
+
+### Web UI
+
+```bash
+tasksquatch web
+```
+
+Then open <http://127.0.0.1:8000/ui>.
+
+### REST API
+
+```bash
+tasksquatch web
+```
+
+The OpenAPI docs live at <http://127.0.0.1:8000/docs> and the API itself is
+mounted at `/api/v1`.
+
+### MCP (Claude Code)
+
+Add this block to your `~/.claude/settings.json`:
+
+```json
+{
+  "mcpServers": {
+    "tasksquatch": {
+      "command": "tasksquatch-mcp"
+    }
+  }
+}
+```
+
+Restart Claude Code. See [`docs/mcp-setup.md`](docs/mcp-setup.md) for the
+full tool catalog and the no-entity-delete permission guard.
+
+### Notifications
+
+`tasksquatch notify` is a one-shot command meant to be scheduled by your
+host's native scheduler. See [`docs/notifications.md`](docs/notifications.md)
+for cron, launchd, and systemd recipes.
+
+## Threat model
+
+The REST API and Web UI bind to `127.0.0.1` only and carry **no auth**.
+That is intentional — `tasksquatch` is a local-only, single-user tool. Do
+not expose either surface to a network. If you need remote access, use SSH
+port-forwarding (`ssh -L 8000:127.0.0.1:8000 host`) rather than binding to
+a public interface or adding ad-hoc auth.
+
+## Docs
 
 - [Build spec (canonical design)](docs/spec.md)
 - [CLAUDE.md (working conventions)](CLAUDE.md)
+- [MCP setup](docs/mcp-setup.md)
+- [Notifications](docs/notifications.md)
+- [Release procedure](docs/release.md)
 - [Architecture notes](docs/architecture.md)
-- License: [MIT](LICENSE)
+
+## Develop
+
+Common loops are wrapped in `Makefile` targets — `make help` lists them.
+
+```bash
+make install     # editable install with dev extras
+make test        # pytest -q
+make lint        # ruff check .
+make format      # ruff format .
+make typecheck   # mypy src (strict)
+```
+
+Pre-commit hooks cover ruff lint, ruff format, mypy, and the usual
+trailing-whitespace / EOF / YAML / TOML checks. Run `pre-commit install`
+once.
+
+## License
+
+[MIT](LICENSE).

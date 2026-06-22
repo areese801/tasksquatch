@@ -60,6 +60,9 @@ tasksquatch.db-shm
 *.db
 *.db-journal
 
+# pytest-textual-snapshot report artifact
+snapshot_report.html
+
 # trusty-cage
 .trusty-cage-patches/
 .cage-patches/

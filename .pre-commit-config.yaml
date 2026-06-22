@@ -25,3 +25,6 @@ repos:
           - types-python-dateutil
           - sqlalchemy>=2.0
           - uuid-utils>=0.9
+          - fastapi>=0.110
+          - pydantic>=2.6
+          - uvicorn>=0.29

@@ -15,9 +15,8 @@ This module owns:
   startup/shutdown to initialize the engine, ensure the Inbox is
   seeded, and dispose of the engine on shutdown.
 
-Domain routers will plug into ``create_app`` in TSQ-24; for now the
-app exposes only the ``/healthz`` meta endpoint and the registered
-exception handlers.
+Domain routers are mounted under ``/api/v1`` by :func:`create_app`;
+the unversioned ``/healthz`` liveness probe sits at the root.
 """
 
 from __future__ import annotations
@@ -38,6 +37,11 @@ from tasksquatch.core import (
     session_scope,
 )
 from tasksquatch.rest.errors import register_exception_handlers
+from tasksquatch.rest.routers import activity as activity_router
+from tasksquatch.rest.routers import comments as comments_router
+from tasksquatch.rest.routers import labels as labels_router
+from tasksquatch.rest.routers import projects as projects_router
+from tasksquatch.rest.routers import tasks as tasks_router
 
 
 @asynccontextmanager
@@ -92,6 +96,12 @@ def create_app(db_path: Path | None = None) -> FastAPI:
     )
     app.state.db_path_override = db_path
     register_exception_handlers(app)
+
+    app.include_router(tasks_router.router, prefix="/api/v1")
+    app.include_router(projects_router.router, prefix="/api/v1")
+    app.include_router(labels_router.router, prefix="/api/v1")
+    app.include_router(comments_router.router, prefix="/api/v1")
+    app.include_router(activity_router.router, prefix="/api/v1")
 
     @app.get("/healthz", tags=["meta"])
     def healthz() -> dict[str, str]:

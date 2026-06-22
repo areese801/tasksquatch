@@ -9,7 +9,7 @@ and the cancel path that leaves persisted state unchanged.
 from __future__ import annotations
 
 from textual.coordinate import Coordinate
-from textual.widgets import DataTable, Input
+from textual.widgets import Button, DataTable, Input, Select, TextArea
 
 from tasksquatch.core.services import projects as projects_service
 from tasksquatch.core.services import queries as queries_service
@@ -154,6 +154,41 @@ async def test_create_task_with_priority_and_due_date(
         new_task = next(t for t in tasks if t.title == "Wire up CI")
     assert new_task.due_date is not None
     assert new_task.due_date.isoformat() == "2026-07-04"
+
+
+async def test_create_form_contains_all_expected_widgets(
+    seeded_app: TasksquatchTuiApp,
+) -> None:
+    """
+    The create modal lays out every documented widget by id.
+
+    Regression test for TSQ-37: the modal previously collapsed to one
+    visible field because the screen carried no styles. A
+    ``DEFAULT_CSS`` block now constrains the modal body so every input
+    is laid out and addressable.
+    """
+    project_id = _work_project_id(seeded_app)
+
+    async with seeded_app.run_test() as pilot:
+        await pilot.app.push_screen(
+            TaskListScreen(project_id=project_id, project_name="Work")
+        )
+        await pilot.pause()
+        await pilot.press("n")
+        await pilot.pause()
+        screen = pilot.app.screen
+        assert isinstance(screen, TaskEditScreen)
+        assert screen.query_one("#edit-title", Input) is not None
+        assert screen.query_one("#edit-description", TextArea) is not None
+        assert screen.query_one("#edit-project", Select) is not None
+        assert screen.query_one("#edit-priority", Select) is not None
+        assert screen.query_one("#edit-due-date", Input) is not None
+        assert screen.query_one("#edit-due-time", Input) is not None
+        assert screen.query_one("#edit-recurrence", Input) is not None
+        assert screen.query_one("#edit-anchor", Select) is not None
+        assert screen.query_one("#edit-labels", Input) is not None
+        assert screen.query_one("#edit-save", Button) is not None
+        assert screen.query_one("#edit-cancel", Button) is not None
 
 
 async def test_edit_screen_refreshes_task_list(

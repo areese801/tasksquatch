@@ -105,3 +105,81 @@ async def test_complete_task_via_d_key(seeded_app: TasksquatchTuiApp) -> None:
         tasks = queries_service.list_tasks(session, project_id=project_id)
         completed = [t for t in tasks if t.completed]
     assert len(completed) >= 1
+
+
+async def test_enter_opens_task_detail(seeded_app: TasksquatchTuiApp) -> None:
+    """
+    Pressing ``enter`` on a focused task row pushes the detail screen.
+
+    The :class:`DataTable` consumes the ``enter`` key for its own
+    :class:`DataTable.RowSelected` event before the screen-level
+    binding fires, so the screen must also handle the row-selected
+    message to push the detail view.
+    """
+    from tasksquatch.tui.screens.task_detail import TaskDetailScreen
+
+    project_id = _work_project_id(seeded_app)
+
+    async with seeded_app.run_test() as pilot:
+        await pilot.app.push_screen(
+            TaskListScreen(project_id=project_id, project_name="Work")
+        )
+        await pilot.pause()
+        await pilot.press("enter")
+        await pilot.pause()
+        assert isinstance(pilot.app.screen, TaskDetailScreen)
+
+
+async def test_cursor_preserved_after_complete_and_uncomplete(
+    seeded_app: TasksquatchTuiApp,
+) -> None:
+    """
+    Completing a task and then un-completing it must act on the same row.
+
+    The seeded "Work" project starts with two tasks ("Write spec",
+    "Ship deploy"). Moving the cursor down once selects the second
+    row; pressing ``d`` completes that task; pressing ``u`` must then
+    uncomplete the *same* task, which requires the cursor to survive
+    the refresh that follows the mutation.
+    """
+    from textual.widgets import DataTable
+
+    project_id = _work_project_id(seeded_app)
+
+    async with seeded_app.run_test() as pilot:
+        await pilot.app.push_screen(
+            TaskListScreen(project_id=project_id, project_name="Work")
+        )
+        await pilot.pause()
+
+        screen = pilot.app.screen
+        assert isinstance(screen, TaskListScreen)
+        table = screen.query_one("#task-table", DataTable)
+        assert table.row_count == 2
+
+        await pilot.press("down")
+        await pilot.pause()
+        target_row, _ = table.coordinate_to_cell_key(table.cursor_coordinate)
+        target_task_id = str(target_row.value)
+
+        await pilot.press("d")
+        await pilot.pause()
+
+        with seeded_app.core_factory() as session:
+            completed = {
+                t.id
+                for t in queries_service.list_tasks(session, project_id=project_id)
+                if t.completed
+            }
+        assert target_task_id in completed
+
+        await pilot.press("u")
+        await pilot.pause()
+
+        with seeded_app.core_factory() as session:
+            open_ids = {
+                t.id
+                for t in queries_service.list_tasks(session, project_id=project_id)
+                if not t.completed
+            }
+        assert target_task_id in open_ids

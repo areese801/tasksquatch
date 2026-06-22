@@ -214,11 +214,40 @@ def test_list_completed_all_shows_open_and_done(
     assert explicit.exit_code == 0, explicit.output
     assert "Pending task" in explicit.output
     assert "Finished task" in explicit.output
+    assert "completed" in explicit.output
+    assert "open" in explicit.output
+    assert "done" in explicit.output
 
     default = runner.invoke(app, ["--db", str(db_path), "list"])
     assert default.exit_code == 0, default.output
     assert "Pending task" in default.output
     assert "Finished task" in default.output
+
+
+def test_list_completed_filtered_drops_redundant_column(
+    runner: CliRunner, db_path: Path
+) -> None:
+    """
+    A filtered ``list`` view drops the ``completed`` column since every
+    visible row would otherwise carry the same value.
+    """
+    runner.invoke(app, ["--db", str(db_path), "add", "Pending task"])
+    runner.invoke(app, ["--db", str(db_path), "add", "Finished task"])
+    runner.invoke(app, ["--db", str(db_path), "done", "2"])
+
+    open_listing = runner.invoke(
+        app, ["--db", str(db_path), "list", "--completed", "open"]
+    )
+    assert open_listing.exit_code == 0, open_listing.output
+    assert "completed" not in open_listing.output
+    assert "Pending task" in open_listing.output
+
+    done_listing = runner.invoke(
+        app, ["--db", str(db_path), "list", "--completed", "done"]
+    )
+    assert done_listing.exit_code == 0, done_listing.output
+    assert "completed" not in done_listing.output
+    assert "Finished task" in done_listing.output
 
 
 def test_list_completed_invalid_value_exits_two(

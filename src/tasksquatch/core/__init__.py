@@ -45,6 +45,11 @@ from tasksquatch.core.paths import get_db_path, get_default_db_path
 from tasksquatch.core.recurrence import next_occurrence, parse_rrule
 from tasksquatch.core.seed import INBOX_NAME, ensure_inbox
 from tasksquatch.core.services.activity import emit
+from tasksquatch.core.services.comments import (
+    add_comment,
+    delete_comment,
+    edit_comment,
+)
 from tasksquatch.core.services.labels import (
     create_label,
     delete_label,
@@ -57,6 +62,16 @@ from tasksquatch.core.services.projects import (
     list_projects,
     move_project,
     rename_project,
+)
+from tasksquatch.core.services.queries import (
+    get_due_tasks,
+    get_task_by_id,
+    get_task_by_number,
+    list_activity,
+    list_comments,
+    list_subtasks,
+    list_tasks,
+    search_tasks,
 )
 from tasksquatch.core.services.tasks import (
     add_label,
@@ -92,6 +107,7 @@ __all__ = [
     "TaskNumberSeq",
     "TasksquatchError",
     "ValidationError",
+    "add_comment",
     "add_label",
     "allocate_task_number",
     "complete_task",
@@ -100,18 +116,27 @@ __all__ = [
     "create_project",
     "create_session_factory",
     "create_task",
+    "delete_comment",
     "delete_label",
     "delete_project",
     "delete_task",
+    "edit_comment",
     "emit",
     "ensure_inbox",
     "get_db_path",
     "get_default_db_path",
     "get_default_engine",
     "get_default_session_factory",
+    "get_due_tasks",
+    "get_task_by_id",
+    "get_task_by_number",
     "init_schema",
+    "list_activity",
+    "list_comments",
     "list_labels",
     "list_projects",
+    "list_subtasks",
+    "list_tasks",
     "move_project",
     "move_task",
     "new_id",
@@ -121,6 +146,7 @@ __all__ = [
     "rename_label",
     "rename_project",
     "reorder_task",
+    "search_tasks",
     "session_scope",
     "set_parent",
     "task_label",

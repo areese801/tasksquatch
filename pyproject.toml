@@ -62,6 +62,7 @@ dev = [
 
 [project.scripts]
 tasksquatch = "tasksquatch.cli.app:app"
+tsq = "tasksquatch.cli.app:app"
 tasksquatch-mcp = "tasksquatch.mcp.server:main"
 
 [project.urls]

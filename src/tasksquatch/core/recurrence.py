@@ -60,7 +60,7 @@ def next_occurrence(
     rrule_str: str,
     *,
     anchor: RecurrenceAnchor,
-    scheduled_date: date,
+    scheduled_date: date | None,
     scheduled_time: time | None,
     completion_dt: datetime | None,
 ) -> tuple[date, time | None] | None:
@@ -73,12 +73,16 @@ def next_occurrence(
       dtstart used for the rrule is ``scheduled_date`` combined with
       ``scheduled_time`` (or midnight if the task is date-only); the
       next occurrence is the first rule-generated datetime strictly
-      after that dtstart.
+      after that dtstart. ``FIXED`` requires a ``scheduled_date`` —
+      a fixed-anchor rule has no other origin to advance from.
     * ``RELATIVE`` advances strictly after the actual completion
-      timestamp. The dtstart still anchors the rule's *pattern* to
-      the original schedule, but ``rrule.after(completion_dt)`` is
-      what selects the next firing. This matches the dateutil
-      semantics of "next pattern hit after the cursor."
+      timestamp. When ``scheduled_date`` is supplied it acts as the
+      dtstart that anchors the rule's *pattern*; when it is ``None``
+      (the "water plants every 3 days, measured from last done" case)
+      the dtstart falls back to ``completion_dt`` so the very first
+      advance is exactly ``completion_dt + INTERVAL`` per the rule.
+      Either way the selected firing is ``rule.after(completion_dt)``,
+      i.e. the next pattern hit after the cursor.
 
     The returned tuple preserves the task's date-only vs date+time
     shape: a task without a ``scheduled_time`` gets back ``(date,
@@ -95,18 +99,42 @@ def next_occurrence(
         might not have an rrule should check before calling).
     :param anchor: The :class:`RecurrenceAnchor` selecting fixed vs
         relative advance.
-    :param scheduled_date: The task's previous due date.
+    :param scheduled_date: The task's previous due date, or ``None``
+        for a ``RELATIVE`` task whose first occurrence has not yet
+        been pinned to a calendar date.
     :param scheduled_time: The task's previous due time, or ``None``
         for a date-only task.
     :param completion_dt: The naive local datetime the task was just
         completed at. Required when ``anchor`` is ``RELATIVE``;
-        ignored when ``anchor`` is ``FIXED``.
+        ignored when ``anchor`` is ``FIXED`` (but must be present then
+        only if ``scheduled_date`` is supplied — see above).
     :returns: A tuple of (next_date, next_time_or_None), or ``None``
         if the recurrence is exhausted.
-    :raises RecurrenceError: If ``rrule_str`` is invalid, or if
-        ``anchor`` is ``RELATIVE`` and ``completion_dt`` is ``None``.
+    :raises RecurrenceError: If ``rrule_str`` is invalid; if
+        ``anchor`` is ``FIXED`` and ``scheduled_date`` is ``None``;
+        or if ``anchor`` is ``RELATIVE`` and ``completion_dt`` is
+        ``None``.
     """
-    dtstart = datetime.combine(scheduled_date, scheduled_time or time(0, 0))
+    if anchor is RecurrenceAnchor.FIXED and scheduled_date is None:
+        raise RecurrenceError(
+            "FIXED anchor requires scheduled_date.",
+            detail={"anchor": anchor.value},
+        )
+
+    if anchor is RecurrenceAnchor.RELATIVE and completion_dt is None:
+        raise RecurrenceError(
+            "RELATIVE anchor requires completion_dt",
+            detail={"anchor": anchor.value},
+        )
+
+    if scheduled_date is not None:
+        dtstart = datetime.combine(scheduled_date, scheduled_time or time(0, 0))
+    else:
+        # RELATIVE-without-scheduled-date: anchor the pattern at the
+        # completion cursor so the first firing is one INTERVAL later.
+        assert completion_dt is not None  # guarded above
+        dtstart = completion_dt
+
     try:
         rule = rrulestr(rrule_str, dtstart=dtstart)
     except ValueError as exc:
@@ -118,11 +146,7 @@ def next_occurrence(
     if anchor is RecurrenceAnchor.FIXED:
         cursor = dtstart
     elif anchor is RecurrenceAnchor.RELATIVE:
-        if completion_dt is None:
-            raise RecurrenceError(
-                "RELATIVE anchor requires completion_dt",
-                detail={"anchor": anchor.value},
-            )
+        assert completion_dt is not None  # guarded above
         cursor = completion_dt
     else:  # pragma: no cover - StrEnum is exhaustive
         raise RecurrenceError(

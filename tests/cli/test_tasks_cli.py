@@ -185,9 +185,50 @@ def test_done_then_list_completed_shows_task(runner: CliRunner, db_path: Path) -
     assert done.exit_code == 0, done.output
     assert "completed" in done.output
 
-    listing = runner.invoke(app, ["--db", str(db_path), "list", "--completed"])
+    listing = runner.invoke(app, ["--db", str(db_path), "list", "--completed", "done"])
     assert listing.exit_code == 0, listing.output
     assert "Send email" in listing.output
+
+
+def test_list_completed_open_excludes_done_tasks(
+    runner: CliRunner, db_path: Path
+) -> None:
+    runner.invoke(app, ["--db", str(db_path), "add", "Pending task"])
+    runner.invoke(app, ["--db", str(db_path), "add", "Finished task"])
+    runner.invoke(app, ["--db", str(db_path), "done", "2"])
+
+    listing = runner.invoke(app, ["--db", str(db_path), "list", "--completed", "open"])
+    assert listing.exit_code == 0, listing.output
+    assert "Pending task" in listing.output
+    assert "Finished task" not in listing.output
+
+
+def test_list_completed_all_shows_open_and_done(
+    runner: CliRunner, db_path: Path
+) -> None:
+    runner.invoke(app, ["--db", str(db_path), "add", "Pending task"])
+    runner.invoke(app, ["--db", str(db_path), "add", "Finished task"])
+    runner.invoke(app, ["--db", str(db_path), "done", "2"])
+
+    explicit = runner.invoke(app, ["--db", str(db_path), "list", "--completed", "all"])
+    assert explicit.exit_code == 0, explicit.output
+    assert "Pending task" in explicit.output
+    assert "Finished task" in explicit.output
+
+    default = runner.invoke(app, ["--db", str(db_path), "list"])
+    assert default.exit_code == 0, default.output
+    assert "Pending task" in default.output
+    assert "Finished task" in default.output
+
+
+def test_list_completed_invalid_value_exits_two(
+    runner: CliRunner, db_path: Path
+) -> None:
+    result = runner.invoke(
+        app, ["--db", str(db_path), "list", "--completed", "garbage"]
+    )
+    assert result.exit_code == 2
+    assert "garbage" in result.output
 
 
 def test_undo_reverts_completion(runner: CliRunner, db_path: Path) -> None:

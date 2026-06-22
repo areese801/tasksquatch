@@ -54,6 +54,37 @@ from tasksquatch.core.services import tasks as tasks_service
 
 _CLEAR_TOKENS = frozenset({"none", "clear", "null"})
 
+_COMPLETED_FILTER: dict[str, bool | None] = {
+    "all": None,
+    "open": False,
+    "done": True,
+}
+
+
+def _parse_completed_filter(value: str) -> bool | None:
+    """
+    Translate the ``list --completed`` value into a query filter.
+
+    Accepts ``"open"``, ``"done"``, or ``"all"`` (case-insensitive) and
+    returns the corresponding ``completed`` value for
+    :func:`tasksquatch.core.services.queries.list_tasks`:
+
+    * ``"all"`` → ``None`` (no filter; both open and done tasks).
+    * ``"open"`` → ``False`` (only incomplete tasks).
+    * ``"done"`` → ``True`` (only completed tasks).
+
+    :param value: The raw ``--completed`` option value.
+    :returns: The query filter value.
+    :raises typer.BadParameter: If ``value`` is not one of the accepted
+        choices.
+    """
+    key = value.strip().lower()
+    if key not in _COMPLETED_FILTER:
+        raise typer.BadParameter(
+            f"invalid value {value!r}; expected one of: open, done, all"
+        )
+    return _COMPLETED_FILTER[key]
+
 
 def _parse_anchor(value: str) -> RecurrenceAnchor:
     """
@@ -207,10 +238,11 @@ def list_tasks(
         help="Restrict to this priority.",
         callback=parse_priority_cb,
     ),
-    completed: bool | None = typer.Option(
-        None,
-        "--completed/--no-completed",
-        help="Restrict to completed or incomplete tasks.",
+    completed: str = typer.Option(
+        "all",
+        "--completed",
+        help="Filter by completion state: open | done | all (default all).",
+        case_sensitive=False,
     ),
     due_before: str | None = typer.Option(
         None,
@@ -247,6 +279,7 @@ def list_tasks(
     priority_value = cast(Priority | None, priority)
     due_before_date = cast(date | None, due_before)
     due_after_date = cast(date | None, due_after)
+    completed_filter = _parse_completed_filter(completed)
 
     with open_session(cli_ctx) as session:
         project_id = resolve_project(session, project).id if project else None
@@ -259,7 +292,7 @@ def list_tasks(
             label_id=label_id,
             parent_id=parent_filter,
             priority=priority_value,
-            completed=completed,
+            completed=completed_filter,
             due_before=due_before_date,
             due_after=due_after_date,
             order_by=order_by,

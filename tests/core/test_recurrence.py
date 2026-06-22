@@ -106,6 +106,32 @@ def test_next_occurrence_relative_requires_completion_dt() -> None:
         )
 
 
+def test_next_occurrence_relative_no_scheduled_date_anchors_at_completion() -> None:
+    # The "water plants every 3 days, measured from last done" case:
+    # there is no scheduled_date yet; the very first advance should
+    # land exactly INTERVAL days after the completion cursor.
+    result = next_occurrence(
+        "FREQ=DAILY;INTERVAL=3",
+        anchor=RecurrenceAnchor.RELATIVE,
+        scheduled_date=None,
+        scheduled_time=None,
+        completion_dt=datetime(2026, 1, 10, 10, 0),
+    )
+    assert result == (date(2026, 1, 13), None)
+
+
+def test_next_occurrence_fixed_no_scheduled_date_raises() -> None:
+    with pytest.raises(RecurrenceError) as excinfo:
+        next_occurrence(
+            "FREQ=DAILY;INTERVAL=1",
+            anchor=RecurrenceAnchor.FIXED,
+            scheduled_date=None,
+            scheduled_time=None,
+            completion_dt=datetime(2026, 1, 5, 9, 0),
+        )
+    assert "FIXED anchor requires scheduled_date" in str(excinfo.value)
+
+
 def test_next_occurrence_date_only_returns_none_time() -> None:
     result = next_occurrence(
         "FREQ=DAILY;INTERVAL=1",

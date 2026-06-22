@@ -136,8 +136,12 @@ class TaskListScreen(Screen[None]):
         Top-level tasks only (``parent_id=None``); subtasks roll up into
         the parent's detail view in TSQ-26. The current filter query is
         re-applied after the fetch so a refresh after, e.g., completing
-        a task keeps the user's narrowed view.
+        a task keeps the user's narrowed view. The cursor is restored
+        to the previously-selected task when the row survives the
+        refresh so follow-up actions (``u`` after ``d``) keep working
+        on the same task.
         """
+        preserve_task_id = self._selected_task()
         app = self._app
         with app.core_factory() as session:
             tasks = queries_service.list_tasks(
@@ -146,7 +150,7 @@ class TaskListScreen(Screen[None]):
                 parent_id=UNSET,
             )
             self._rows = [self._render_row(task) for task in tasks]
-        self._apply_filter()
+        self._apply_filter(preserve_task_id=preserve_task_id)
 
     def _render_row(self, task: Task) -> _TaskRow:
         """
@@ -179,13 +183,18 @@ class TaskListScreen(Screen[None]):
             haystack=haystack,
         )
 
-    def _apply_filter(self) -> None:
+    def _apply_filter(self, *, preserve_task_id: str | None = None) -> None:
         """
         Re-render the table according to the current filter query.
 
         Calls :func:`fuzzy_score` against the cached row haystacks and
         rebuilds the :class:`DataTable` rows in place. An empty filter
         is a no-op fast path that preserves the natural row order.
+
+        :param preserve_task_id: When supplied and still visible after
+            the rebuild, the cursor is restored to that task's row. Used
+            by :meth:`refresh_tasks` so an action like ``d`` followed
+            by ``u`` keeps operating on the same row.
         """
         table = self.query_one("#task-table", DataTable)
         table.clear()
@@ -199,7 +208,8 @@ class TaskListScreen(Screen[None]):
             )
             visible = [(idx, self._rows[idx]) for idx, _ in scored]
 
-        for _, row in visible:
+        target_row: int = 0
+        for visible_index, (_, row) in enumerate(visible):
             table.add_row(
                 f"#{row.number}",
                 row.title,
@@ -208,9 +218,11 @@ class TaskListScreen(Screen[None]):
                 row.labels,
                 key=row.task_id,
             )
+            if preserve_task_id is not None and row.task_id == preserve_task_id:
+                target_row = visible_index
 
         if table.row_count > 0:
-            table.move_cursor(row=0)
+            table.move_cursor(row=target_row)
 
     def on_filter_changed(self, message: FilterChanged) -> None:
         """
@@ -221,6 +233,22 @@ class TaskListScreen(Screen[None]):
         message.stop()
         self._filter_query = message.query
         self._apply_filter()
+
+    def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
+        """
+        Open the highlighted task when the user activates a row.
+
+        The :class:`DataTable` emits :class:`DataTable.RowSelected` on
+        ``enter`` (when the table has focus and ``cursor_type`` is
+        ``"row"``). The ``enter`` binding alone is shadowed by the
+        table's own key handling, so we re-dispatch through
+        :meth:`action_open_task` from the event handler that the
+        widget always delivers.
+
+        :param event: The bubbled row-activation message.
+        """
+        event.stop()
+        self.action_open_task()
 
     def _selected_task(self) -> str | None:
         """

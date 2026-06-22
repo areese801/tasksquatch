@@ -70,6 +70,46 @@ class TaskEditScreen(ModalScreen[str | None]):
         Binding("ctrl+s", "submit", "Save", show=False),
     ]
 
+    DEFAULT_CSS = """
+    TaskEditScreen {
+        align: center middle;
+    }
+
+    TaskEditScreen #edit-body {
+        width: 70%;
+        height: 80%;
+        background: $panel;
+        border: tall $accent;
+        padding: 1 2;
+    }
+
+    TaskEditScreen #edit-heading {
+        text-style: bold;
+        content-align: center middle;
+        padding-bottom: 1;
+    }
+
+    TaskEditScreen .edit-label {
+        color: $text-muted;
+        margin-top: 1;
+    }
+
+    TaskEditScreen Input,
+    TaskEditScreen TextArea,
+    TaskEditScreen Select {
+        width: 100%;
+    }
+
+    TaskEditScreen TextArea {
+        height: 5;
+    }
+
+    TaskEditScreen #edit-save {
+        margin-top: 1;
+        margin-right: 1;
+    }
+    """
+
     def __init__(
         self,
         *,

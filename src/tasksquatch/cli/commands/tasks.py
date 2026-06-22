@@ -303,17 +303,19 @@ def list_tasks(
         if cli_ctx.json:
             print_json(rendered, console=cli_ctx.console)
         else:
+            columns = [
+                "number",
+                "title",
+                "project",
+                "priority",
+                "due",
+                "labels",
+            ]
+            if completed_filter is None:
+                columns.append("completed")
             print_table(
                 rendered,
-                columns=[
-                    "number",
-                    "title",
-                    "project",
-                    "priority",
-                    "due",
-                    "labels",
-                    "completed",
-                ],
+                columns=columns,
                 console=cli_ctx.console,
                 title="tasks",
             )

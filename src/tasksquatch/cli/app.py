@@ -15,7 +15,10 @@ from pathlib import Path
 import typer
 
 from tasksquatch.cli._context import CliContext
+from tasksquatch.cli.commands import find as find_cmd
+from tasksquatch.cli.commands import label as label_cmd
 from tasksquatch.cli.commands import notify as notify_cmd
+from tasksquatch.cli.commands import project as project_cmd
 from tasksquatch.cli.commands import tasks as tasks_cmd
 from tasksquatch.cli.commands import version as version_cmd
 from tasksquatch.cli.rendering import default_console
@@ -73,3 +76,6 @@ app.command(name="edit")(tasks_cmd.edit)
 app.command(name="rm")(tasks_cmd.rm)
 app.command(name="move")(tasks_cmd.move)
 app.command(name="comment")(tasks_cmd.comment)
+app.command(name="find")(find_cmd.find)
+app.add_typer(project_cmd.project_app, name="project")
+app.add_typer(label_cmd.label_app, name="label")

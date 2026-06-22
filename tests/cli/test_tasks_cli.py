@@ -215,8 +215,8 @@ def test_list_completed_all_shows_open_and_done(
     assert "Pending task" in explicit.output
     assert "Finished task" in explicit.output
     assert "completed" in explicit.output
-    assert "open" in explicit.output
-    assert "done" in explicit.output
+    assert "true" in explicit.output
+    assert "false" in explicit.output
 
     default = runner.invoke(app, ["--db", str(db_path), "list"])
     assert default.exit_code == 0, default.output

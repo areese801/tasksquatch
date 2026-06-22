@@ -13,15 +13,17 @@ from __future__ import annotations
 
 from datetime import UTC, date, datetime
 
+import pytest
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from tasksquatch.core.errors import ValidationError
 from tasksquatch.core.models import (
     ActivityEventType,
     ActivityLog,
     RecurrenceAnchor,
 )
-from tasksquatch.core.services.tasks import complete_task, create_task
+from tasksquatch.core.services.tasks import complete_task, create_task, update_task
 
 
 def test_complete_recurring_fixed_advances_one_day(session: Session) -> None:
@@ -132,3 +134,80 @@ def test_complete_recurring_relative_advances_after_completion(
 
     assert task.due_date == date(2026, 1, 11)
     assert task.completed is False
+
+
+def test_relative_recurrence_no_due_date(session: Session) -> None:
+    """
+    A RELATIVE-anchor recurring task may be created without a
+    ``due_date``: the first ``done`` pins the next occurrence relative
+    to the completion timestamp. Subsequent ``done`` calls advance
+    from the most recent completion cursor.
+    """
+    task = create_task(
+        session,
+        title="water plants",
+        recurrence="FREQ=DAILY;INTERVAL=3",
+        recurrence_anchor=RecurrenceAnchor.RELATIVE,
+        due_date=None,
+    )
+    assert task.due_date is None
+
+    first_when = datetime(2026, 1, 10, 10, 0)
+    complete_task(session, task.id, when=first_when)
+
+    assert task.completed is False
+    assert task.due_date == date(2026, 1, 13)
+    assert task.due_time is None
+
+    rows = (
+        session.execute(select(ActivityLog).order_by(ActivityLog.created_at.asc()))
+        .scalars()
+        .all()
+    )
+    event_types = [row.event_type for row in rows]
+    assert event_types[-2:] == [
+        ActivityEventType.COMPLETED,
+        ActivityEventType.RECURRENCE_ADVANCED,
+    ]
+
+    # After the first complete the task now has a concrete due_date
+    # (2026-01-13); the second complete therefore goes through the
+    # standard RELATIVE-with-due-date path. dateutil anchors the
+    # every-3-days pattern at 2026-01-13 (so hits 1/13, 1/16, 1/19, ...)
+    # and ``rule.after(2026-01-14 08:00)`` selects the next firing
+    # strictly after the completion cursor — 2026-01-16.
+    second_when = datetime(2026, 1, 14, 8, 0)
+    complete_task(session, task.id, when=second_when)
+    assert task.due_date == date(2026, 1, 16)
+    assert task.completed is False
+
+
+def test_fixed_recurrence_requires_due_date(session: Session) -> None:
+    """
+    Creating or updating a FIXED-anchor recurring task without a
+    ``due_date`` is rejected up front by the service validators.
+    """
+    with pytest.raises(ValidationError):
+        create_task(
+            session,
+            title="bad fixed task",
+            recurrence="FREQ=DAILY",
+            recurrence_anchor=RecurrenceAnchor.FIXED,
+            due_date=None,
+        )
+
+    existing = create_task(
+        session,
+        title="ok fixed task",
+        recurrence="FREQ=DAILY",
+        recurrence_anchor=RecurrenceAnchor.FIXED,
+        due_date=date(2026, 2, 1),
+    )
+
+    with pytest.raises(ValidationError):
+        update_task(
+            session,
+            existing.id,
+            recurrence_anchor=RecurrenceAnchor.FIXED,
+            due_date=None,
+        )

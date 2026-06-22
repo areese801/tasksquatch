@@ -314,6 +314,20 @@ def test_patch_task_invalid_recurrence_returns_422(client: TestClient) -> None:
     assert response.status_code == 422
 
 
+def test_create_fixed_recurrence_without_due_date_returns_422(
+    client: TestClient,
+) -> None:
+    response = client.post(
+        "/api/v1/tasks",
+        json={
+            "title": "fixed-no-due",
+            "recurrence": "FREQ=DAILY",
+            "recurrence_anchor": "fixed",
+        },
+    )
+    assert response.status_code == 422, response.text
+
+
 def test_delete_task(client: TestClient) -> None:
     task = _make_task(client, title="going")
     response = client.delete(f"/api/v1/tasks/{task['id']}")

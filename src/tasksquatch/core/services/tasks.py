@@ -250,6 +250,14 @@ def create_task(
 
     if recurrence is not None and recurrence.strip():
         parse_rrule(recurrence)
+        if recurrence_anchor is RecurrenceAnchor.FIXED and due_date is None:
+            raise ValidationError(
+                "FIXED-anchor recurring tasks must have a due_date.",
+                detail={
+                    "recurrence": recurrence,
+                    "recurrence_anchor": recurrence_anchor.value,
+                },
+            )
 
     labels: list[Label] = [_get_label_or_raise(session, lid) for lid in label_ids]
 
@@ -351,6 +359,31 @@ def update_task(
         and recurrence.strip()
     ):
         parse_rrule(recurrence)
+
+    new_recurrence = (
+        task.recurrence if isinstance(recurrence, _UnsetType) else recurrence
+    )
+    new_anchor = (
+        task.recurrence_anchor
+        if isinstance(recurrence_anchor, _UnsetType)
+        else recurrence_anchor
+    )
+    new_due_date = task.due_date if isinstance(due_date, _UnsetType) else due_date
+
+    if (
+        new_recurrence is not None
+        and new_recurrence.strip()
+        and new_anchor is RecurrenceAnchor.FIXED
+        and new_due_date is None
+    ):
+        raise ValidationError(
+            "FIXED-anchor recurring tasks must have a due_date.",
+            detail={
+                "task_id": task.id,
+                "recurrence": new_recurrence,
+                "recurrence_anchor": new_anchor.value,
+            },
+        )
 
     incoming: dict[str, Any] = {
         "title": title,
@@ -708,6 +741,17 @@ def complete_task(
       fires for the new occurrence. Both ``COMPLETED`` and
       ``RECURRENCE_ADVANCED`` activity rows are emitted.
 
+    ``RELATIVE``-anchor tasks may have no ``due_date`` at all — e.g.
+    "water plants every 3 days, measured from when last done" is
+    created without a date and is pinned on the first ``done``. In
+    that case ``next_occurrence`` is anchored at the completion
+    cursor and the resulting date is written back as the new
+    ``due_date`` (with ``due_time = None``). ``FIXED``-anchor
+    recurring tasks must always carry a ``due_date``; the
+    create/update validators enforce that, and this function raises
+    :class:`ValidationError` as a defensive backstop if the
+    invariant is somehow violated at runtime.
+
     :param session: An open SQLAlchemy session.
     :param task_id: The task's UUIDv7 string id.
     :param when: The timestamp to record as the completion. Defaults
@@ -741,9 +785,12 @@ def complete_task(
         )
         return task
 
-    if task.due_date is None:
+    if task.due_date is None and task.recurrence_anchor is RecurrenceAnchor.FIXED:
+        # The create/update validators should prevent this state from
+        # ever being persisted; raise here as a defensive backstop in
+        # case some path slipped through.
         raise ValidationError(
-            "Recurring task is missing a due_date; cannot advance.",
+            "FIXED-anchor recurring tasks must have a due_date.",
             detail={"task_id": task.id},
         )
 

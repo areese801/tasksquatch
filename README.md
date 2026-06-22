@@ -29,10 +29,12 @@ cd tasksquatch && make install
 
 ### CLI
 
+Use `tasksquatch` or the short alias `tsq`.
+
 ```bash
 tasksquatch add "Buy milk" -d today
 tasksquatch list
-tasksquatch done 1
+tsq done 1
 ```
 
 ### TUI

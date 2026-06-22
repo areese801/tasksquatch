@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import tomllib
+from importlib import import_module
 from pathlib import Path
 
 from typer.testing import CliRunner
@@ -13,6 +15,25 @@ def test_version_command_prints_package_version() -> None:
     result = runner.invoke(app, ["version"])
     assert result.exit_code == 0
     assert result.output.strip() == __version__
+
+
+def test_tsq_alias_and_full_name_share_app_object() -> None:
+    """
+    Both ``tasksquatch`` and ``tsq`` console scripts must reference the
+    same Typer ``app`` object so the alias is a true alias rather than a
+    second, drift-prone wrapper.
+    """
+    pyproject_path = Path(__file__).resolve().parents[2] / "pyproject.toml"
+    pyproject = tomllib.loads(pyproject_path.read_text(encoding="utf-8"))
+    scripts = pyproject["project"]["scripts"]
+
+    assert scripts["tasksquatch"] == "tasksquatch.cli.app:app"
+    assert scripts["tsq"] == "tasksquatch.cli.app:app"
+
+    module_path, attr = scripts["tsq"].split(":")
+    module = import_module(module_path)
+    aliased_app = getattr(module, attr)
+    assert aliased_app is app
 
 
 def test_notify_command_runs_on_empty_db(tmp_path: Path) -> None:

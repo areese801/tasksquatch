@@ -21,6 +21,7 @@ from tasksquatch.cli.commands import notify as notify_cmd
 from tasksquatch.cli.commands import project as project_cmd
 from tasksquatch.cli.commands import tasks as tasks_cmd
 from tasksquatch.cli.commands import version as version_cmd
+from tasksquatch.cli.commands import web as web_cmd
 from tasksquatch.cli.rendering import default_console
 
 app = typer.Typer(
@@ -77,5 +78,6 @@ app.command(name="rm")(tasks_cmd.rm)
 app.command(name="move")(tasks_cmd.move)
 app.command(name="comment")(tasks_cmd.comment)
 app.command(name="find")(find_cmd.find)
+app.command(name="web")(web_cmd.web)
 app.add_typer(project_cmd.project_app, name="project")
 app.add_typer(label_cmd.label_app, name="label")

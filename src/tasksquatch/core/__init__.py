@@ -8,6 +8,7 @@ surface.
 
 from __future__ import annotations
 
+from tasksquatch.core._sentinels import UNSET
 from tasksquatch.core.db import (
     Base,
     TaskNumberSeq,
@@ -57,9 +58,22 @@ from tasksquatch.core.services.projects import (
     move_project,
     rename_project,
 )
+from tasksquatch.core.services.tasks import (
+    add_label,
+    complete_task,
+    create_task,
+    delete_task,
+    move_task,
+    remove_label,
+    reorder_task,
+    set_parent,
+    uncomplete_task,
+    update_task,
+)
 
 __all__ = [
     "INBOX_NAME",
+    "UNSET",
     "ActivityEventType",
     "ActivityLog",
     "AlreadyCompletedError",
@@ -78,13 +92,17 @@ __all__ = [
     "TaskNumberSeq",
     "TasksquatchError",
     "ValidationError",
+    "add_label",
     "allocate_task_number",
+    "complete_task",
     "create_engine_for_path",
     "create_label",
     "create_project",
     "create_session_factory",
+    "create_task",
     "delete_label",
     "delete_project",
+    "delete_task",
     "emit",
     "ensure_inbox",
     "get_db_path",
@@ -95,11 +113,17 @@ __all__ = [
     "list_labels",
     "list_projects",
     "move_project",
+    "move_task",
     "new_id",
     "next_occurrence",
     "parse_rrule",
+    "remove_label",
     "rename_label",
     "rename_project",
+    "reorder_task",
     "session_scope",
+    "set_parent",
     "task_label",
+    "uncomplete_task",
+    "update_task",
 ]

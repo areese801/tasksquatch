@@ -19,14 +19,36 @@ from tasksquatch.core.db import (
     session_scope,
 )
 from tasksquatch.core.ids import allocate_task_number, new_id
+from tasksquatch.core.models import (
+    ActivityEventType,
+    ActivityLog,
+    Comment,
+    Label,
+    Priority,
+    Project,
+    RecurrenceAnchor,
+    Task,
+    task_label,
+)
 from tasksquatch.core.paths import get_db_path, get_default_db_path
+from tasksquatch.core.seed import INBOX_NAME, ensure_inbox
 
 __all__ = [
+    "INBOX_NAME",
+    "ActivityEventType",
+    "ActivityLog",
     "Base",
+    "Comment",
+    "Label",
+    "Priority",
+    "Project",
+    "RecurrenceAnchor",
+    "Task",
     "TaskNumberSeq",
     "allocate_task_number",
     "create_engine_for_path",
     "create_session_factory",
+    "ensure_inbox",
     "get_db_path",
     "get_default_db_path",
     "get_default_engine",
@@ -34,4 +56,5 @@ __all__ = [
     "init_schema",
     "new_id",
     "session_scope",
+    "task_label",
 ]

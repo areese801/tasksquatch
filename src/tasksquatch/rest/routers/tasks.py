@@ -45,6 +45,20 @@ class _TaskList(BaseModel):
     items: list[TaskRead]
 
 
+class RescheduleOverdueRequest(BaseModel):
+    """
+    Body for :func:`reschedule_overdue_endpoint`.
+
+    ``include_recurring`` opts recurring tasks into the bump (the
+    advance-in-place flow normally covers them). ``dry_run`` rolls the
+    transaction back after building the response, so callers can
+    preview without committing.
+    """
+
+    include_recurring: bool = False
+    dry_run: bool = False
+
+
 class _CompleteBody(BaseModel):
     """
     Optional body for :func:`complete_task` carrying the completion
@@ -349,6 +363,39 @@ def list_tasks_endpoint(
         limit=limit,
     )
     return _TaskList(items=[TaskRead.from_task(task) for task in rows])
+
+
+@router.post(
+    "/reschedule-overdue",
+    response_model=_TaskList,
+    summary="Bump every overdue, incomplete task to today.",
+    description=(
+        "Bump every overdue, incomplete task's ``due_date`` to today. "
+        "Recurring tasks are skipped by default; set "
+        "``include_recurring`` to bump them too. Set ``dry_run`` to "
+        "preview without committing — the response body still lists "
+        "the rows that would be bumped."
+    ),
+)
+def reschedule_overdue_endpoint(
+    body: RescheduleOverdueRequest,
+    session: Annotated[Session, Depends(get_session)],
+) -> _TaskList:
+    """
+    Bump every overdue, incomplete task and return the bumped rows.
+
+    The ``TaskRead`` payload is built before any optional rollback so
+    label relationships are serialized while the rows are still bound
+    to the session.
+    """
+    bumped = tasks_service.reschedule_overdue(
+        session,
+        include_recurring=body.include_recurring,
+    )
+    rendered = _TaskList(items=[TaskRead.from_task(task) for task in bumped])
+    if body.dry_run:
+        session.rollback()
+    return rendered
 
 
 @router.get(

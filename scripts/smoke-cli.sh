@@ -138,4 +138,24 @@ _expect_contains "$out" "Home" "tsq label ls includes the new label"
 out="$(tsq label rm Home --yes 2>&1)"
 _expect_contains "$out" "Home" "tsq label rm confirms the deletion"
 
+# 21. reschedule-overdue
+out="$(tsq add "ancient" -d 2020-01-01 2>&1)"
+_expect_contains "$out" "ancient" "tsq add seeds an overdue task"
+ancient_number="${out##*#}"
+ancient_number="${ancient_number%%:*}"
+
+out="$(tsq reschedule-overdue --dry-run --yes 2>&1)"
+_expect_contains "$out" "ancient" "tsq reschedule-overdue --dry-run mentions the overdue task"
+_expect_contains "$out" "would bump" "tsq reschedule-overdue --dry-run announces no writes"
+
+out="$(tsq show "$ancient_number" 2>&1)"
+_expect_contains "$out" "2020-01-01" "tsq reschedule-overdue --dry-run did not write to the DB"
+
+out="$(tsq reschedule-overdue --yes 2>&1)"
+_expect_contains "$out" "bumped" "tsq reschedule-overdue --yes confirms the bump"
+
+today="$(date +%Y-%m-%d)"
+out="$(tsq show "$ancient_number" 2>&1)"
+_expect_contains "$out" "$today" "tsq reschedule-overdue moved the overdue task to today"
+
 _report

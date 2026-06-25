@@ -798,6 +798,38 @@ def tool_list_labels(core: CoreContext) -> dict[str, Any]:
         return {"items": [_label_to_dict(label) for label in labels]}
 
 
+def tool_reschedule_overdue_tasks(
+    core: CoreContext,
+    *,
+    include_recurring: bool = False,
+    dry_run: bool = False,
+) -> dict[str, Any]:
+    """
+    Bump every overdue, incomplete task's ``due_date`` to today.
+
+    Recurring tasks are skipped by default; their advance-in-place
+    logic already covers missed occurrences. Pass
+    ``include_recurring=True`` to bump them too. Pass ``dry_run=True``
+    to preview the would-be result and roll the transaction back.
+
+    :param core: The MCP context.
+    :param include_recurring: When ``True``, also bump recurring
+        overdue tasks.
+    :param dry_run: When ``True``, build the response then roll back so
+        no changes hit the DB.
+    :returns: ``{"items": [TaskRead, ...]}`` listing the bumped rows.
+    """
+    with open_session(core) as session:
+        bumped = task_service.reschedule_overdue(
+            session,
+            include_recurring=include_recurring,
+        )
+        result = {"items": [_task_to_dict(task) for task in bumped]}
+        if dry_run:
+            session.rollback()
+        return result
+
+
 def tool_read_activity_log(
     core: CoreContext,
     *,
@@ -850,6 +882,7 @@ TOOL_HANDLERS: dict[str, ToolHandler] = {
     "list_projects": tool_list_projects,
     "list_labels": tool_list_labels,
     "read_activity_log": tool_read_activity_log,
+    "reschedule_overdue_tasks": tool_reschedule_overdue_tasks,
 }
 
 
@@ -1027,6 +1060,14 @@ JSON_SCHEMAS: dict[str, dict[str, Any]] = {
             "event_type": {"type": "string", "enum": _EVENT_VALUES},
             "since": {"type": "string", "format": "date-time"},
             "limit": {"type": "integer", "minimum": 1},
+        },
+        "additionalProperties": False,
+    },
+    "reschedule_overdue_tasks": {
+        "type": "object",
+        "properties": {
+            "include_recurring": {"type": "boolean"},
+            "dry_run": {"type": "boolean"},
         },
         "additionalProperties": False,
     },

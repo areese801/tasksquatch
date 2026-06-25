@@ -56,6 +56,18 @@ def test_handler_table_matches_allowed_tools() -> None:
     assert set(TOOL_HANDLERS) == set(ALLOWED_TOOLS)
 
 
+def test_reschedule_overdue_tasks_is_registered() -> None:
+    """
+    The :func:`reschedule_overdue` MCP tool must be both registered
+    and allow-listed. The handler-table-vs-allow-list assertion
+    covers consistency in general, but pinning the name explicitly
+    catches accidental rename regressions.
+    """
+    assert "reschedule_overdue_tasks" in TOOL_HANDLERS
+    assert "reschedule_overdue_tasks" in JSON_SCHEMAS
+    assert "reschedule_overdue_tasks" in ALLOWED_TOOLS
+
+
 def test_no_delete_tools_registered() -> None:
     """
     The three denied tool names must never appear in the dispatch

@@ -19,8 +19,8 @@ clears it. Omitting an option leaves the underlying field untouched.
 
 from __future__ import annotations
 
-from datetime import date, time
-from typing import cast
+from datetime import date, time, timedelta
+from typing import Annotated, cast
 
 import typer
 
@@ -642,3 +642,127 @@ def comment(
         comments_service.add_comment(session, task_id=task.id, body=body)
         session.commit()
         cli_ctx.console.print(f"added comment to #{task.number}")
+
+
+def _format_due(due_date: date | None, due_time: time | None) -> str:
+    """
+    Render a ``(date, time)`` pair as ``"YYYY-MM-DD"`` or
+    ``"YYYY-MM-DD HH:MM"`` for the reschedule-overdue preview table.
+
+    Captured here so the preview rows can be rendered after a session
+    rollback without crossing back into the rendering module's private
+    helper.
+    """
+    if due_date is None:
+        return "-"
+    if due_time is None:
+        return due_date.isoformat()
+    return f"{due_date.isoformat()} {due_time.strftime('%H:%M')}"
+
+
+@cli_command
+def reschedule_overdue(
+    ctx: typer.Context,
+    today_override: Annotated[
+        str | None,
+        typer.Option(
+            "--today",
+            help="Override today's date (YYYY-MM-DD or today/tomorrow).",
+        ),
+    ] = None,
+    include_recurring: Annotated[
+        bool,
+        typer.Option(
+            "--include-recurring/--no-include-recurring",
+            help="Also bump recurring tasks. Default skips them.",
+        ),
+    ] = False,
+    dry_run: Annotated[
+        bool,
+        typer.Option(
+            "--dry-run",
+            help="Print what would change; do not write to the DB.",
+        ),
+    ] = False,
+    yes: Annotated[
+        bool,
+        typer.Option(
+            "-y",
+            "--yes",
+            help="Skip the interactive confirmation when not dry.",
+        ),
+    ] = False,
+) -> None:
+    """
+    Bump every overdue, incomplete task's due_date to today.
+
+    Recurring tasks are skipped by default — their advance-in-place
+    logic already covers missed occurrences. Pass
+    ``--include-recurring`` to bump them too. ``--dry-run`` reports
+    what would change without writing.
+    """
+    cli_ctx = get_cli_context(ctx)
+    resolved_today = parse_date(today_override) if today_override else date.today()
+    assert resolved_today is not None
+
+    with open_session(cli_ctx) as session:
+        preview_rows = queries_service.list_tasks(
+            session,
+            completed=False,
+            due_before=resolved_today - timedelta(days=1),
+            parent_id=UNSET,
+        )
+        if not include_recurring:
+            preview_rows = [t for t in preview_rows if not t.recurrence]
+
+        olds: dict[str, tuple[int, str, date | None, time | None]] = {
+            t.id: (t.number, t.title, t.due_date, t.due_time) for t in preview_rows
+        }
+
+        bumped = tasks_service.reschedule_overdue(
+            session,
+            today=resolved_today,
+            include_recurring=include_recurring,
+        )
+
+        render_rows: list[dict[str, object]] = []
+        for task in bumped:
+            number, title, old_date, old_time = olds[task.id]
+            render_rows.append(
+                {
+                    "number": number,
+                    "title": title,
+                    "old_due": _format_due(old_date, old_time),
+                    "new_due": _format_due(resolved_today, old_time),
+                }
+            )
+
+        if dry_run:
+            session.rollback()
+        elif not yes and render_rows:
+            typer.confirm(
+                f"Bump {len(render_rows)} task(s)?",
+                default=False,
+                abort=True,
+            )
+
+        if not render_rows:
+            cli_ctx.console.print("No overdue tasks.")
+            return
+
+        if cli_ctx.json:
+            print_json(render_rows, console=cli_ctx.console)
+        else:
+            print_table(
+                render_rows,
+                columns=["number", "title", "old_due", "new_due"],
+                console=cli_ctx.console,
+                title="overdue tasks",
+            )
+
+        if dry_run:
+            cli_ctx.console.print(
+                f"would bump {len(render_rows)} task(s) (dry run; no changes written)"
+            )
+        else:
+            cli_ctx.console.print(f"bumped {len(render_rows)} task(s)")

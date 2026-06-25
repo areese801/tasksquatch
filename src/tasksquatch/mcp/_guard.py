@@ -35,6 +35,7 @@ ALLOWED_TOOLS: frozenset[str] = frozenset(
         "list_projects",
         "list_labels",
         "read_activity_log",
+        "reschedule_overdue_tasks",
     }
 )
 

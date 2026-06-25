@@ -165,6 +165,8 @@ A **global, append-only, queryable** log of events across all tasks. Used both b
 
 The log is append-only: entries are never edited or deleted by application logic.
 
+`rescheduled` events may carry an optional `reason` field inside `detail`; the value `"overdue_auto_bump"` marks rows produced by the `reschedule_overdue` service (the cross-surface "bump every overdue task to today" action) so they are distinguishable from user-driven reschedules.
+
 ### Numeric id semantics
 
 - Each task gets a friendly integer `number`, assigned in creation order.

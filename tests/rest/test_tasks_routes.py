@@ -511,3 +511,54 @@ def test_patch_task_validation_errors(
     task = _make_task(client, title="x")
     response = client.patch(f"/api/v1/tasks/{task['id']}", json=payload)
     assert response.status_code == 422
+
+
+def test_reschedule_overdue_endpoint_happy_path(client: TestClient) -> None:
+    a = _make_task(client, title="old-a", due_date="2020-01-01")
+    b = _make_task(client, title="old-b", due_date="2020-02-01")
+    _make_task(client, title="future", due_date="2099-01-01")
+
+    response = client.post("/api/v1/tasks/reschedule-overdue", json={})
+    assert response.status_code == 200, response.text
+    items = response.json()["items"]
+    today_iso = date.today().isoformat()
+
+    bumped_ids = {row["id"] for row in items}
+    assert {a["id"], b["id"]}.issubset(bumped_ids)
+    for row in items:
+        if row["id"] in {a["id"], b["id"]}:
+            assert row["due_date"] == today_iso
+
+
+def test_reschedule_overdue_endpoint_dry_run_no_write(client: TestClient) -> None:
+    task = _make_task(client, title="old", due_date="2020-01-01")
+
+    response = client.post(
+        "/api/v1/tasks/reschedule-overdue",
+        json={"dry_run": True},
+    )
+    assert response.status_code == 200, response.text
+    items = response.json()["items"]
+    assert len(items) == 1
+    assert items[0]["id"] == task["id"]
+
+    fetched = client.get(f"/api/v1/tasks/{task['id']}").json()
+    assert fetched["due_date"] == "2020-01-01"
+
+
+def test_reschedule_overdue_endpoint_include_recurring(client: TestClient) -> None:
+    _make_task(
+        client,
+        title="daily",
+        due_date="2020-01-01",
+        recurrence="FREQ=DAILY",
+    )
+
+    default = client.post("/api/v1/tasks/reschedule-overdue", json={}).json()
+    assert default["items"] == []
+
+    inclusive = client.post(
+        "/api/v1/tasks/reschedule-overdue",
+        json={"include_recurring": True},
+    ).json()
+    assert len(inclusive["items"]) == 1

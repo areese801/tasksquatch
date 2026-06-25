@@ -28,6 +28,7 @@ from tasksquatch.mcp.tools import (
     tool_list_tasks,
     tool_read_activity_log,
     tool_remove_label_from_task,
+    tool_reschedule_overdue_tasks,
     tool_search_tasks,
     tool_uncomplete_task,
     tool_update_task,
@@ -177,3 +178,15 @@ def test_add_task_with_project_name(core: CoreContext) -> None:
 def test_search_with_empty_query_returns_nothing(core: CoreContext) -> None:
     tool_add_task(core, title="anything")
     assert tool_search_tasks(core, query="")["items"] == []
+
+
+def test_reschedule_overdue_tasks_happy_path(core: CoreContext) -> None:
+    overdue = tool_add_task(core, title="old", due_date="2020-01-01")
+    tool_add_task(core, title="future", due_date="2099-01-01")
+
+    result = tool_reschedule_overdue_tasks(core)
+    item_ids = {row["id"] for row in result["items"]}
+    assert overdue["id"] in item_ids
+
+    fetched = tool_get_task(core, task_id=overdue["id"])
+    assert fetched["task"]["due_date"] != "2020-01-01"

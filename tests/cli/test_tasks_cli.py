@@ -469,6 +469,165 @@ def test_json_list_emits_parseable_json(runner: CliRunner, db_path: Path) -> Non
 
 
 # ---------------------------------------------------------------------------
+# reschedule-overdue
+# ---------------------------------------------------------------------------
+
+
+def _seed_overdue_task(db_path: Path, title: str, due: date) -> None:
+    """
+    Create an overdue task in ``db_path`` with the given ``due`` date.
+    """
+    sess = _open_session(db_path)
+    try:
+        from tasksquatch.core.services.tasks import create_task
+
+        create_task(sess, title=title, due_date=due)
+        sess.commit()
+    finally:
+        sess.close()
+
+
+def test_reschedule_overdue_dry_run_does_not_write(
+    runner: CliRunner, db_path: Path
+) -> None:
+    _seed_overdue_task(db_path, "ancient", date(2020, 1, 1))
+    result = runner.invoke(
+        app,
+        [
+            "--db",
+            str(db_path),
+            "reschedule-overdue",
+            "--dry-run",
+            "--yes",
+            "--today",
+            "2026-06-25",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    assert "would bump" in result.output
+    assert "ancient" in result.output
+
+    sess = _open_session(db_path)
+    try:
+        task = sess.execute(select(Task)).scalars().one()
+        assert task.due_date == date(2020, 1, 1)
+    finally:
+        sess.close()
+
+
+def test_reschedule_overdue_yes_writes(runner: CliRunner, db_path: Path) -> None:
+    _seed_overdue_task(db_path, "ancient", date(2020, 1, 1))
+    result = runner.invoke(
+        app,
+        [
+            "--db",
+            str(db_path),
+            "reschedule-overdue",
+            "--yes",
+            "--today",
+            "2026-06-25",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    assert "bumped 1" in result.output
+
+    sess = _open_session(db_path)
+    try:
+        task = sess.execute(select(Task)).scalars().one()
+        assert task.due_date == date(2026, 6, 25)
+    finally:
+        sess.close()
+
+
+def test_reschedule_overdue_prompts_without_yes(
+    runner: CliRunner, db_path: Path
+) -> None:
+    _seed_overdue_task(db_path, "ancient", date(2020, 1, 1))
+    confirmed = runner.invoke(
+        app,
+        [
+            "--db",
+            str(db_path),
+            "reschedule-overdue",
+            "--today",
+            "2026-06-25",
+        ],
+        input="y\n",
+    )
+    assert confirmed.exit_code == 0, confirmed.output
+
+    sess = _open_session(db_path)
+    try:
+        task = sess.execute(select(Task)).scalars().one()
+        assert task.due_date == date(2026, 6, 25)
+    finally:
+        sess.close()
+
+    _seed_overdue_task(db_path, "ancient2", date(2019, 1, 1))
+    aborted = runner.invoke(
+        app,
+        [
+            "--db",
+            str(db_path),
+            "reschedule-overdue",
+            "--today",
+            "2026-06-25",
+        ],
+        input="n\n",
+    )
+    assert aborted.exit_code != 0
+
+    sess = _open_session(db_path)
+    try:
+        rows = sess.execute(select(Task).order_by(Task.number)).scalars().all()
+        assert rows[-1].due_date == date(2019, 1, 1)
+    finally:
+        sess.close()
+
+
+def test_reschedule_overdue_no_tasks_exits_zero(
+    runner: CliRunner, db_path: Path
+) -> None:
+    result = runner.invoke(
+        app,
+        [
+            "--db",
+            str(db_path),
+            "reschedule-overdue",
+            "--yes",
+            "--today",
+            "2026-06-25",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    assert "No overdue tasks" in result.output
+
+
+def test_reschedule_overdue_json_output(runner: CliRunner, db_path: Path) -> None:
+    _seed_overdue_task(db_path, "ancient", date(2020, 1, 1))
+    result = runner.invoke(
+        app,
+        [
+            "--db",
+            str(db_path),
+            "--json",
+            "reschedule-overdue",
+            "--yes",
+            "--today",
+            "2026-06-25",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+
+    decoder = json.JSONDecoder()
+    payload, _ = decoder.raw_decode(result.output.lstrip())
+    assert isinstance(payload, list)
+    assert payload[0]["title"] == "ancient"
+    assert payload[0]["new_due"] == "2026-06-25"
+    assert payload[0]["old_due"] == "2020-01-01"
+
+
+# ---------------------------------------------------------------------------
 # parsers
 # ---------------------------------------------------------------------------
 

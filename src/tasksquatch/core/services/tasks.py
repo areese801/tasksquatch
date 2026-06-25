@@ -23,7 +23,7 @@ from __future__ import annotations
 
 from collections import deque
 from collections.abc import Iterable
-from datetime import UTC, date, datetime, time
+from datetime import UTC, date, datetime, time, timedelta
 from typing import Any
 
 from sqlalchemy import func, select
@@ -46,6 +46,7 @@ from tasksquatch.core.models import (
 )
 from tasksquatch.core.recurrence import next_occurrence, parse_rrule
 from tasksquatch.core.seed import ensure_inbox
+from tasksquatch.core.services import queries
 from tasksquatch.core.services.activity import emit
 
 
@@ -919,3 +920,65 @@ def delete_task(session: Session, task_id: str) -> None:
     )
     session.delete(task)
     session.flush()
+
+
+def reschedule_overdue(
+    session: Session,
+    *,
+    today: date | None = None,
+    include_recurring: bool = False,
+) -> list[Task]:
+    """
+    Bump every overdue, incomplete task's ``due_date`` to today.
+
+    Re-uses :func:`tasksquatch.core.services.queries.list_tasks` for
+    the selection filter and emits one
+    :attr:`ActivityEventType.RESCHEDULED` row per bumped task.
+    ``due_time`` is preserved on tasks that have one;
+    ``last_notified_at`` is cleared so the notify pass treats the
+    bumped row as a fresh occurrence (same invariant
+    :func:`update_task` already maintains on schedule changes).
+
+    :param session: An open SQLAlchemy session; the caller owns commit.
+    :param today: Date treated as "today" (default: :func:`date.today`).
+    :param include_recurring: When ``False`` (default), skip tasks with
+        a non-null ``recurrence`` string — their advance-in-place logic
+        already covers missed occurrences. Set ``True`` to bump them
+        too.
+    :returns: The list of bumped :class:`Task` rows ordered by
+        ``Task.number`` ascending.
+    """
+    resolved_today = today if today is not None else date.today()
+
+    candidates = queries.list_tasks(
+        session,
+        completed=False,
+        due_before=resolved_today - timedelta(days=1),
+        parent_id=UNSET,
+    )
+
+    bumped: list[Task] = []
+    for task in candidates:
+        if not include_recurring and task.recurrence:
+            continue
+        old_date = task.due_date
+        old_time = task.due_time
+        task.due_date = resolved_today
+        task.last_notified_at = None
+        bumped.append(task)
+
+        emit(
+            session,
+            task_id=task.id,
+            event_type=ActivityEventType.RESCHEDULED,
+            detail={
+                "task_id": task.id,
+                "from": _schedule_payload(old_date, old_time),
+                "to": _schedule_payload(resolved_today, task.due_time),
+                "reason": "overdue_auto_bump",
+            },
+        )
+
+    session.flush()
+    bumped.sort(key=lambda t: t.number)
+    return bumped
